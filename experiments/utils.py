@@ -62,10 +62,12 @@ def subtract_imagenet_mean_batch(batch):
     """Subtract ImageNet mean pixel-wise from a BGR image."""
     tensortype = type(batch.data)
     mean = tensortype(batch.data.size())
+    # print ('type..',tensortype)
     mean[:, 0, :, :] = 103.939
     mean[:, 1, :, :] = 116.779
     mean[:, 2, :, :] = 123.680
-    return batch - Variable(mean)
+
+    return batch - Variable(mean).cuda()
 
 
 def add_imagenet_mean_batch(batch):
@@ -94,14 +96,26 @@ def preprocess_batch(batch):
 def init_vgg16(model_folder):
     """load the vgg16 model feature"""
     if not os.path.exists(os.path.join(model_folder, 'vgg16.weight')):
-        if not os.path.exists(os.path.join(model_folder, 'vgg16.t7')):
-            os.system(
-                'wget http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/vgg16.t7 -O ' + os.path.join(model_folder, 'vgg16.t7'))
-        vgglua = load_lua(os.path.join(model_folder, 'vgg16.t7'))
+        torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+        vggtorch = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True)  
+        print ('vggtorch.parameters()[0]',vggtorch.parameters())
+
         vgg = Vgg16()
-        for (src, dst) in zip(vgglua.parameters()[0], vgg.parameters()):
+        for (src, dst) in zip(vggtorch.parameters(), vgg.parameters()):
             dst.data[:] = src
         torch.save(vgg.state_dict(), os.path.join(model_folder, 'vgg16.weight'))
+
+# def init_vgg16(model_folder):
+#     """load the vgg16 model feature"""
+#     if not os.path.exists(os.path.join(model_folder, 'vgg16.weight')):
+#         if not os.path.exists(os.path.join(model_folder, 'vgg16.t7')):
+#             os.system(
+#                 'wget http://cs.stanford.edu/people/jcjohns/fast-neural-style/models/vgg16.t7 -O ' + os.path.join(model_folder, 'vgg16.t7'))
+#         vgglua = load_lua(os.path.join(model_folder, 'vgg16.t7'))
+#         vgg = Vgg16()
+#         for (src, dst) in zip(vgglua.parameters()[0], vgg.parameters()):
+#             dst.data[:] = src
+#         torch.save(vgg.state_dict(), os.path.join(model_folder, 'vgg16.weight'))
 
 
 class StyleLoader():

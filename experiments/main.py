@@ -70,10 +70,15 @@ def optimize(args):
     vgg = Vgg16()
     utils.init_vgg16(args.vgg_model_dir)
     vgg.load_state_dict(torch.load(os.path.join(args.vgg_model_dir, "vgg16.weight")))
+
+    # torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+    # vgg = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True)  
+
     if args.cuda:
         content_image = content_image.cuda()
         style_image = style_image.cuda()
         vgg.cuda()
+
     features_content = vgg(content_image)
     f_xc_c = Variable(features_content[1].data, requires_grad=False)
     features_style = vgg(style_image)
@@ -127,7 +132,7 @@ def train(args):
     if args.resume is not None:
         print('Resuming, initializing using weight from {}.'.format(args.resume))
         style_model.load_state_dict(torch.load(args.resume))
-    print(style_model)
+    # print(style_model)
     optimizer = Adam(style_model.parameters(), args.lr)
     mse_loss = torch.nn.MSELoss()
 
@@ -135,12 +140,15 @@ def train(args):
     utils.init_vgg16(args.vgg_model_dir)
     vgg.load_state_dict(torch.load(os.path.join(args.vgg_model_dir, "vgg16.weight")))
 
+    # torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
+    # vgg = torch.hub.load('pytorch/vision:v0.10.0', 'vgg16', pretrained=True)    
+
     if args.cuda:
+        print ('use cuda')
         style_model.cuda()
         vgg.cuda()
 
     style_loader = utils.StyleLoader(args.style_folder, args.style_size)
-
     tbar = trange(args.epochs)
     for e in tbar:
         style_model.train()
@@ -185,8 +193,8 @@ def train(args):
             total_loss.backward()
             optimizer.step()
 
-            agg_content_loss += content_loss.data[0]
-            agg_style_loss += style_loss.data[0]
+            agg_content_loss += content_loss.data.item()
+            agg_style_loss += style_loss.item()
 
             if (batch_id + 1) % args.log_interval == 0:
                 mesg = "{}\tEpoch {}:\t[{}/{}]\tcontent: {:.6f}\tstyle: {:.6f}\ttotal: {:.6f}".format(
